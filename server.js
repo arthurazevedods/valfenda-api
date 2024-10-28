@@ -10,9 +10,14 @@ const shelfRoutes = require('./routes/shelfRoutes');
 const db = require('./config/db');
 
 const PORT = process.env.PORT || 8080;
+app.use(cors({
+    origin: ["https://valfenda-client.vercel.app"],
+    methods: ["POST","GET","UPDATE","DELETE"],
+    credentials: true
+}));
 const app = express();
 app.use(express.json());
-app.use(cors());
+
 
 // Conectar ao MongoDB
 db();
