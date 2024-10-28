@@ -30,7 +30,7 @@ app.use('/api/publishers', publisherRoutes);
 app.use('/api/shelves', shelfRoutes);
 
 app.get('/', (req, res) => {
-    res.send('Servidor rodando e conectado ao MongoDB!');
+    res.json('Servidor rodando e conectado ao MongoDB!');
 });
 
 app.listen(PORT, () => {
