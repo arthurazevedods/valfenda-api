@@ -2,12 +2,15 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const bcrypt = require('bcryptjs');
+
 
 const port = 8080
 const app = express();
 app.use(express.json());
 app.use(cors());
 
+const MAX_USERS = 3; //Máximo de usuários
 
 // Conectar ao MongoDB
 mongoose.connect(process.env.MONGO_URI)
@@ -15,30 +18,36 @@ mongoose.connect(process.env.MONGO_URI)
     .catch((error) => console.error('Erro ao conectar ao MongoDB:', error));
 
 
-    const Author = mongoose.model('Author', {
-        name: { type: String, required: true },
-        bookIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Book' }],
-        version: { type: Number, default: 1 } 
-    });
-    const Publisher = mongoose.model('Publisher', {
-        name: { type: String, required: true},
-        version: { type: Number, default: 1 }
-    });
-    const Book = mongoose.model('Book', {
-        title: { type: String, required: true },
-        publisher: { type: mongoose.Schema.Types.ObjectId, ref: 'Publisher' },
-        authorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Author' },
-        shelfId: { type: mongoose.Schema.Types.ObjectId, ref: 'Shelf' },
-        version: { type: Number, default: 1 } 
-    });
-    
-    const Shelf = mongoose.model('Shelf', {
-        name: { type: String, required: true },
-        description: { type: String },
-        bookIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Book' }],
-        version: { type: Number, default: 1 } 
-    });
-    
+const Author = mongoose.model('Author', {
+    name: { type: String, required: true },
+    bookIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Book' }],
+    version: { type: Number, default: 1 }
+});
+const Publisher = mongoose.model('Publisher', {
+    name: { type: String, required: true },
+    version: { type: Number, default: 1 }
+});
+const Book = mongoose.model('Book', {
+    title: { type: String, required: true },
+    publisher: { type: mongoose.Schema.Types.ObjectId, ref: 'Publisher' },
+    authorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Author' },
+    shelfId: { type: mongoose.Schema.Types.ObjectId, ref: 'Shelf' },
+    version: { type: Number, default: 1 }
+});
+
+const Shelf = mongoose.model('Shelf', {
+    name: { type: String, required: true },
+    email: { type: String },
+    bookIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Book' }],
+    version: { type: Number, default: 1 }
+});
+
+const User = mongoose.model('User', {
+    name: { type: String, required: true },
+    email: { type: String, required: true },
+    password: { type: String, required: true }
+});
+
 
 app.get('/', (req, res) => {
     res.send('Servidor rodando e conectado ao MongoDB!');
@@ -177,10 +186,68 @@ const addItems = async (model, req, res, fields) => {
 // Rotas para adicionar livros e autores
 app.post('/books', (req, res) => addItems(Book, req, res, ['title', 'publisher', 'authorId']));
 app.post('/authors', (req, res) => addItems(Author, req, res, ['name']));
-app.post('/shelves', (req, res) => addItems(Shelf, req,res, ['name', 'description']));
-app.post('/publishers', (req, res) => addItems(Publisher, req,res, ['name']));
+app.post('/shelves', (req, res) => addItems(Shelf, req, res, ['name', 'description']));
+app.post('/publishers', (req, res) => addItems(Publisher, req, res, ['name']));
 
+//LOGIN E SIGN UP
 
+// Função para validação básica de email e senha
+const validateFields = (req, res, next) => {
+    const { email, password } = req.body;
+    if (!email || !password) {
+        return res.status(400).json({ message: 'Email e senha são obrigatórios' });
+    }
+    next();
+};
+// LOGIN
+app.post("/login", validateFields, async (req, res) => {
+    const { email, password } = req.body;
+
+    try {
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ message: 'Usuário não encontrado' });
+        }
+
+        // Comparar a senha digitada com a senha armazenada
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (isMatch) {
+            res.json("exist");
+        } else {
+            res.status(400).json({ message: 'Credenciais incorretas' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'Erro no servidor', error });
+    }
+});
+
+// SIGNUP
+app.post("/signup", validateFields, async (req, res) => {
+    const { name, email, password } = req.body;
+
+    try {
+        const userCount = await User.countDocuments();
+
+        // Verificar se o número de usuários excede o limite máximo
+        if (userCount >= MAX_USERS) {
+            return res.status(403).json({ message: "O número máximo de usuários foi atingido. Não é possível criar mais contas." });
+        }
+
+        const userExists = await User.findOne({ email });
+        if (userExists) {
+            return res.status(400).json({ message: 'Usuário já existe' });
+        }
+
+        // Hash da senha antes de salvar
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const newUser = new User({ name, email, password: hashedPassword });
+
+        await newUser.save();
+        res.status(201).json({ message: 'Usuário criado com sucesso', user: newUser });
+    } catch (error) {
+        res.status(500).json({ message: 'Erro ao criar o usuário', error });
+    }
+});
 
 app.listen(port, () => {
     console.log('Servidor rodando na porta ', port);
