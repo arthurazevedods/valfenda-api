@@ -10,7 +10,7 @@ const {
 
 // Rotas para autor
 router.post('/', authMiddleware, addAuthor); // Adicionar autor
-router.get('/', authMiddleware, getAllAuthors); // Obter todos os autores
+router.get('/',  getAllAuthors); // Obter todos os autores
 router.put('/:id', authMiddleware, updateAuthor); // Atualizar autor
 router.delete('/:id', authMiddleware, deleteAuthor); // Deletar autor
 
