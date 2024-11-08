@@ -34,7 +34,6 @@ const login = async (req, res) => {
 
         // Cria o token
         const token = generateToken(user._id); 
-
         return res.json({
             message: "Login bem-sucedido",
             user: {
