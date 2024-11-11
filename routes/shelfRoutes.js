@@ -10,7 +10,7 @@ const {
 
 // Rotas para prateleiras
 router.post('/', authMiddleware, addShelf); // Adicionar prateleira
-router.get('/', authMiddleware, getAllShelves); // Obter todas as prateleiras
+router.get('/', getAllShelves); // Obter todas as prateleiras
 router.put('/:id', authMiddleware, updateShelf); // Atualizar prateleira
 router.delete('/:id', authMiddleware, deleteShelf); // Deletar prateleira
 
