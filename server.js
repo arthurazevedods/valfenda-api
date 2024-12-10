@@ -24,6 +24,8 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true
 }));
+console.log("CORS configurado para as seguintes origens:", process.env.FRONTEND_URL);
+
 
 app.use(express.json());
 
